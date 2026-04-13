@@ -3,7 +3,7 @@ Medical Intraoperative Real-time Visualization System.
 
 ## Demo
 
-> [!TIPS]
+> [!TIP]
 > For another demo, see https://github.com/GGN-2015/medscope_demo_project
 
 ![](/img/demo.gif)
