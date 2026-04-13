@@ -368,9 +368,9 @@ class VolumeSliceViewer:
         if x is not None:
             self.current_x = max(0.0, min(x, h - 1))
         if y is not None:
-            self.current_y = max(0.0 , min(- y + (1.5 * w), w - 1.0))
+            self.current_y = max(0.0 , min(- y + 0.5 * w, w - 1.0))
         if z is not None:
-            self.current_z = max(0.0, min(- z - (1.25 * d), d - 1))
+            self.current_z = max(0.0, min(- z + 1.25 * d, d - 1))
     
         self.update_all_slices()
 
@@ -394,7 +394,10 @@ class VolumeSliceViewer:
 
         if axis == 'z':
             # XY 切面: (3, H, W, index) -> (H, W, 3)
-            return np.flip(self.volume_data[:, :, :, index].transpose(2, 1, 0), axis=0)
+            return np.flip(
+                np.flip(
+                    self.volume_data[:, :, :, index].transpose(2, 1, 0), axis=0),
+                    axis=1)
         elif axis == 'y':
             # XZ 切面: (3, H, index, D) -> (H, D, 3)
             return self.volume_data[:, :, index, :].transpose(2, 1, 0)
