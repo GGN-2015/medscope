@@ -1,6 +1,6 @@
 [project]
 name = "medscope"
-version = "0.1.10"
+version = "0.1.11"
 description = "Medical Intraoperative Real-time Visualization System."
 authors = [
     {name = "GGN_2015",email = "neko@jlulug.org"}
