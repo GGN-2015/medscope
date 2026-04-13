@@ -116,6 +116,15 @@ class VTKModelManager:
         transform = vtk.vtkTransform()
         transform.Identity()
         
+        if translation_matrix is not None:
+            if isinstance(translation_matrix, tuple) and len(translation_matrix) == 3:
+                transform.Translate(translation_matrix[0], translation_matrix[1], translation_matrix[2])
+            elif isinstance(translation_matrix, np.ndarray):
+                if translation_matrix.shape == (3,):
+                    transform.Translate(translation_matrix[0], translation_matrix[1], translation_matrix[2])
+                elif translation_matrix.shape == (3, 1):
+                    transform.Translate(translation_matrix[0, 0], translation_matrix[1, 0], translation_matrix[2, 0])
+                
         if rotation_matrix is not None:
             if rotation_matrix.shape == (3, 3):
                 mat = vtk.vtkMatrix4x4()
@@ -130,15 +139,6 @@ class VTKModelManager:
                     for j in range(4):
                         mat.SetElement(i, j, rotation_matrix[i, j])
                 transform.Concatenate(mat)
-                
-        if translation_matrix is not None:
-            if isinstance(translation_matrix, tuple) and len(translation_matrix) == 3:
-                transform.Translate(translation_matrix[0], translation_matrix[1], translation_matrix[2])
-            elif isinstance(translation_matrix, np.ndarray):
-                if translation_matrix.shape == (3,):
-                    transform.Translate(translation_matrix[0], translation_matrix[1], translation_matrix[2])
-                elif translation_matrix.shape == (3, 1):
-                    transform.Translate(translation_matrix[0, 0], translation_matrix[1, 0], translation_matrix[2, 0])
                 
         actor.SetUserTransform(transform)
         return True
