@@ -561,15 +561,6 @@ class MedScopeWindow(QMainWindow):
     def set_volume(self, volume: np.ndarray) -> None:
         self.slice_viewer.set_volume(volume)
     
-    def set_slice_x(self, x: int) -> None:
-        self.slice_viewer.set_slice_position('x', x)
-    
-    def set_slice_y(self, y: int) -> None:
-        self.slice_viewer.set_slice_position('y', y)
-    
-    def set_slice_z(self, z: int) -> None:
-        self.slice_viewer.set_slice_position('z', z)
-    
     def set_slice_positions(self, x: Optional[int] = None, y: Optional[int] = None, z: Optional[int] = None) -> None:
         self.slice_viewer.set_slice_positions(x, y, z)
     
