@@ -368,9 +368,9 @@ class VolumeSliceViewer:
         if x is not None:
             self.current_x = max(0.0, min(x, h - 1))
         if y is not None:
-            self.current_y = max(0.0 , min(- y, w - 1.0))
+            self.current_y = max(0.0 , min(- y + w - 1, w - 1.0))
         if z is not None:
-            self.current_z = max(0.0, min(- z, d - 1))
+            self.current_z = max(0.0, min(- z + d - 1, d - 1))
     
         self.update_all_slices()
 
