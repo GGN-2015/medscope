@@ -69,7 +69,7 @@ window.set_camera_pose(
 #   RGB channel image 3 * N * M * L
 window.set_volume(np.random.randint(0, 255, (3, 256, 256, 256)).astype(np.uint8))
 
-# use N * M * L to achive grey image
+# use N * M * L to achieve grey image
 # window.set_volume(np.random.randint(0, 255, (256, 256, 256)).astype(np.uint8))
 
 # Create a callback function to move your model
