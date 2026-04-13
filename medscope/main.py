@@ -355,11 +355,11 @@ class VolumeSliceViewer:
         
         self.volume_data = volume
         _, h, w, d = volume.shape
-        self.current_x = h // 2
-        self.current_y = w // 2
-        self.current_z = d // 2
+        self.current_x =   (h // 2)
+        self.current_y = - (w // 2)
+        self.current_z =   (d // 2)
         self.update_all_slices()
-    
+
     def set_slice_position(self, axis: str, position: float) -> None:
         if self.volume_data is None:
             return
@@ -368,7 +368,7 @@ class VolumeSliceViewer:
         if axis == 'x':
             self.current_x = max(0.0, min(position, h - 1))
         elif axis == 'y':
-            self.current_y = max(0.0, min(position, w - 1))
+            self.current_y = max(-w , min(position, -1.0))
         elif axis == 'z':
             self.current_z = max(0.0, min(position, d - 1))
         else:
@@ -384,7 +384,7 @@ class VolumeSliceViewer:
         if x is not None:
             self.current_x = max(0.0, min(x, h - 1))
         if y is not None:
-            self.current_y = max(0.0, min(y, w - 1))
+            self.current_y = max(-w , min(y, -1.0))
         if z is not None:
             self.current_z = max(0.0, min(z, d - 1))
     
@@ -413,7 +413,8 @@ class VolumeSliceViewer:
             return self.volume_data[:, :, :, index].transpose(1, 2, 0)
         elif axis == 'y':
             # XZ 切面: (3, H, index, D) -> (H, D, 3)
-            return self.volume_data[:, :, index, :].transpose(1, 2, 0)
+            w = self.volume_data.shape[2]
+            return self.volume_data[:, :, w + index, :].transpose(1, 2, 0)
         else:  # axis == 'x'
             # YZ 切面: (3, index, W, D) -> (W, D, 3)
             return self.volume_data[:, index, :, :].transpose(1, 2, 0)

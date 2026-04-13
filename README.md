@@ -84,7 +84,7 @@ def move_model():
     global lp
     import random
     x = random.random() * 256
-    y = random.random() * 256
+    y = random.random() * 256 - 256
     z = random.random() * 256
     window.set_slice_positions(x, y, z)
     window.set_model_pose(
