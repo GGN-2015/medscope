@@ -66,7 +66,11 @@ window.set_camera_pose(
 
 # Volume data should be given in 3D np.ndarray 
 #   and dtype should be np.uint8
-window.set_volume(np.random.randint(0, 255, (256, 256, 256)).astype(np.uint8))
+#   RGB channel image 3 * N * M * L
+window.set_volume(np.random.randint(0, 255, (3, 256, 256, 256)).astype(np.uint8))
+
+# use N * M * L to achive grey image
+# window.set_volume(np.random.randint(0, 255, (256, 256, 256)).astype(np.uint8))
 
 # Create a callback function to move your model
 def move_model():
