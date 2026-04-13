@@ -8,7 +8,7 @@ Medical Intraoperative Real-time Visualization System.
 ## Installation
 
 > [!IMPORTANT]
-> You should use python >=3.10, <3.13
+> You should use `python >=3.10, <3.13`
 
 ```bash
 pip install medscope
