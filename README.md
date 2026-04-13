@@ -72,18 +72,32 @@ window.set_volume(np.random.randint(0, 255, (3, 256, 256, 256)).astype(np.uint8)
 # use N * M * L to achieve grey image
 # window.set_volume(np.random.randint(0, 255, (256, 256, 256)).astype(np.uint8))
 
+# calculate fps every 3.0s
+import time
+lp = time.time()
+pp = 3.0
+fc = 0
+
 # Create a callback function to move your model
 def move_model():
+    global fc
+    global lp
     import random
-    x = random.randint(0, 256)
-    y = random.randint(0, 256)
-    z = random.randint(0, 256)
+    x = random.random() * 256
+    y = random.random() * 256
+    z = random.random() * 256
     window.set_slice_positions(x, y, z)
     window.set_model_pose(
         "bone_model",
         (x - 128, y - 128, z - 128),
         random_rotation_matrix()
     )
+    fc += 1
+    if time.time() - lp >= pp:
+        print(f"fps: {fc / (time.time() - lp)}")
+        lp = time.time()
+        fc = 0
+
 
 # Call move_model every 1ms (as quickly as the processor can)
 window.add_timer("move_model", 1, move_model)

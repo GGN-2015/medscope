@@ -327,9 +327,9 @@ class VolumeSliceViewer:
         self.volume_data: Optional[np.ndarray] = None  # shape=(3, N, M, L), uint8
         self.image_widgets = image_widgets
         
-        self.current_x: int = 0
-        self.current_y: int = 0
-        self.current_z: int = 0
+        self.current_x: float = 0
+        self.current_y: float = 0
+        self.current_z: float = 0
         
     def set_volume(self, volume: np.ndarray) -> None:
         """
@@ -360,50 +360,113 @@ class VolumeSliceViewer:
         self.current_z = d // 2
         self.update_all_slices()
     
-    def set_slice_position(self, axis: str, position: int) -> None:
+    def set_slice_position(self, axis: str, position: float) -> None:
         if self.volume_data is None:
             return
         
         _, h, w, d = self.volume_data.shape
         if axis == 'x':
-            self.current_x = max(0, min(position, h - 1))
+            self.current_x = max(0.0, min(position, h - 1))
         elif axis == 'y':
-            self.current_y = max(0, min(position, w - 1))
+            self.current_y = max(0.0, min(position, w - 1))
         elif axis == 'z':
-            self.current_z = max(0, min(position, d - 1))
+            self.current_z = max(0.0, min(position, d - 1))
         else:
             raise ValueError("Axis must be 'x', 'y', 'z'")
         
         self._update_slice(axis)
     
-    def set_slice_positions(self, x: Optional[int] = None, y: Optional[int] = None, z: Optional[int] = None) -> None:
+    def set_slice_positions(self, x: Optional[float] = None, y: Optional[float] = None, z: Optional[float] = None) -> None:
         if self.volume_data is None:
             return
         
         _, h, w, d = self.volume_data.shape
         if x is not None:
-            self.current_x = max(0, min(x, h - 1))
+            self.current_x = max(0.0, min(x, h - 1))
         if y is not None:
-            self.current_y = max(0, min(y, w - 1))
+            self.current_y = max(0.0, min(y, w - 1))
         if z is not None:
-            self.current_z = max(0, min(z, d - 1))
-        
-        self.update_all_slices()
+            self.current_z = max(0.0, min(z, d - 1))
     
+        self.update_all_slices()
+
+    def _get_axis_index(self, axis: str) -> int:
+        """返回轴向在 volume_data 中的索引位置"""
+        axis_map = {'x': 1, 'y': 2, 'z': 3}
+        return axis_map[axis]
+    
+    def _get_slice_array(self, axis: str, index: int) -> np.ndarray:
+        """
+        获取指定轴向的切片数组，并转换为 (H, W, 3) 格式
+        
+        Args:
+            axis: 切片轴向 ('x', 'y', 'z')
+            index: 整数索引
+        
+        Returns:
+            切片数组，格式为 (H, W, 3)
+        """
+        assert self.volume_data is not None
+
+        if axis == 'z':
+            # XY 切面: (3, H, W, index) -> (H, W, 3)
+            return self.volume_data[:, :, :, index].transpose(1, 2, 0)
+        elif axis == 'y':
+            # XZ 切面: (3, H, index, D) -> (H, D, 3)
+            return self.volume_data[:, :, index, :].transpose(1, 2, 0)
+        else:  # axis == 'x'
+            # YZ 切面: (3, index, W, D) -> (W, D, 3)
+            return self.volume_data[:, index, :, :].transpose(1, 2, 0)
+
+    def _interpolate_slice(self, axis: str, position: float) -> np.ndarray:
+        """
+        对指定轴向上的切片进行插值
+        
+        Args:
+            axis: 切片轴向 ('x', 'y', 'z')
+            position: 浮点数切片位置
+        
+        Returns:
+            插值后的 RGB 图像，shape=(H, W, 3) 或对应维度
+        """
+        if self.volume_data is None:
+            return np.array([])
+        
+        channels, h, w, d = self.volume_data.shape
+        
+        # 获取整数索引和小数部分
+        idx_low = int(np.floor(position))
+        idx_high = min(idx_low + 1, self.volume_data.shape[self._get_axis_index(axis)] - 1)
+        frac = position - idx_low
+        
+        # 如果位置正好是整数或者小数部分为0，直接返回对应切片
+        if frac == 0 or idx_low == idx_high:
+            return self._get_slice_array(axis, idx_low)
+        
+        # 获取两个相邻切片
+        slice_low = self._get_slice_array(axis, idx_low)
+        slice_high = self._get_slice_array(axis, idx_high)
+        
+        # 线性插值
+        interpolated = (1 - frac) * slice_low + frac * slice_high
+        
+        # 确保数据类型为 uint8
+        return interpolated.astype(np.uint8)
+
     def update_all_slices(self) -> None:
         if self.volume_data is None:
             return
         
-        # XY 切面 (固定Z) → (3, H, W) → (H, W, 3)
-        xy = self.volume_data[:, :, :, self.current_z].transpose(1, 2, 0)
+        # XY 切面 (固定Z)
+        xy = self._interpolate_slice('z', self.current_z)
         self.image_widgets[0].update_slice(xy)
         
-        # XZ 切面 (固定Y) → (3, H, D) → (H, D, 3)
-        xz = self.volume_data[:, :, self.current_y, :].transpose(1, 2, 0)
+        # XZ 切面 (固定Y)
+        xz = self._interpolate_slice('y', self.current_y)
         self.image_widgets[1].update_slice(xz)
         
-        # YZ 切面 (固定X) → (3, W, D) → (W, D, 3)
-        yz = self.volume_data[:, self.current_x, :, :].transpose(1, 2, 0)
+        # YZ 切面 (固定X)
+        yz = self._interpolate_slice('x', self.current_x)
         self.image_widgets[2].update_slice(yz)
     
     def _update_slice(self, axis: str) -> None:
@@ -411,21 +474,19 @@ class VolumeSliceViewer:
             return
         
         if axis == 'z':
-            xy = self.volume_data[:, :, :, self.current_z].transpose(1, 2, 0)
-            self.image_widgets[0].update_slice(xy)
+            interpolated = self._interpolate_slice('z', self.current_z)
+            self.image_widgets[0].update_slice(interpolated)
         elif axis == 'y':
-            xz = self.volume_data[:, :, self.current_y, :].transpose(1, 2, 0)
-            self.image_widgets[1].update_slice(xz)
+            interpolated = self._interpolate_slice('y', self.current_y)
+            self.image_widgets[1].update_slice(interpolated)
         elif axis == 'x':
-            yz = self.volume_data[:, self.current_x, :, :].transpose(1, 2, 0)
-            self.image_widgets[2].update_slice(yz)
+            interpolated = self._interpolate_slice('x', self.current_x)
+            self.image_widgets[2].update_slice(interpolated)
     
-    def get_current_positions(self) -> Tuple[int, int, int]:
+    def get_current_positions(self) -> Tuple[float, float, float]:
         return self.current_x, self.current_y, self.current_z
 
 class MedScopeWindow(QMainWindow):
-    """主窗口：完全兼容 RGB 4D 输入，功能不变"""
-    
     def set_window_title(self, new_title:str, force:bool=False):
         if force or (new_title != self.window_title):
             self.window_title = new_title
@@ -434,7 +495,7 @@ class MedScopeWindow(QMainWindow):
     def __init__(self):
         super().__init__()
 
-        self.window_title = "MedScope RGB 3D图像查看器"
+        self.window_title = "MedScope"
         self.set_window_title(self.window_title, True)
         
         screen = QApplication.primaryScreen()
@@ -527,7 +588,7 @@ class MedScopeWindow(QMainWindow):
     def set_slice_positions(self, x: Optional[int] = None, y: Optional[int] = None, z: Optional[int] = None) -> None:
         self.slice_viewer.set_slice_positions(x, y, z)
     
-    def get_slice_positions(self) -> Tuple[int, int, int]:
+    def get_slice_positions(self) -> Tuple[float, float, float]:
         return self.slice_viewer.get_current_positions()
     
     # VTK 接口完全不变
