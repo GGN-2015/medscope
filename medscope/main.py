@@ -366,7 +366,7 @@ class VolumeSliceViewer:
         
         _, h, w, d = self.volume_data.shape
         if axis == 'x':
-            self.current_x = max(0.0, min(position, h - 1))
+            self.current_x = max(0.0, min(h - 1 - position, h - 1))
         elif axis == 'y':
             self.current_y = max(-w , min(position, -1.0))
         elif axis == 'z':
@@ -382,7 +382,7 @@ class VolumeSliceViewer:
         
         _, h, w, d = self.volume_data.shape
         if x is not None:
-            self.current_x = max(0.0, min(x, h - 1))
+            self.current_x = max(0.0, min(h - 1 - x, h - 1))
         if y is not None:
             self.current_y = max(-w , min(y, -1.0))
         if z is not None:
@@ -410,14 +410,14 @@ class VolumeSliceViewer:
 
         if axis == 'z':
             # XY 切面: (3, H, W, index) -> (H, W, 3)
-            return self.volume_data[:, :, :, index].transpose(1, 2, 0)
+            return self.volume_data[:, :, :, index].transpose(2, 1, 0)
         elif axis == 'y':
             # XZ 切面: (3, H, index, D) -> (H, D, 3)
             w = self.volume_data.shape[2]
-            return self.volume_data[:, :, w + index, :].transpose(1, 2, 0)
+            return self.volume_data[:, :, w + index, :].transpose(2, 1, 0)
         else:  # axis == 'x'
             # YZ 切面: (3, index, W, D) -> (W, D, 3)
-            return self.volume_data[:, index, :, :].transpose(1, 2, 0)
+            return self.volume_data[:, index, :, :].transpose(2, 1, 0)
 
     def _interpolate_slice(self, axis: str, position: float) -> np.ndarray:
         """
