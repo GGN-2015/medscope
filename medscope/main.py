@@ -395,7 +395,9 @@ class VolumeSliceViewer:
         if axis == 'z':
             # XY 切面: (3, H, W, index) -> (H, W, 3)
             return np.flip(
-                    self.volume_data[:, :, :, index].transpose(2, 1, 0), axis=0)
+                np.flip(
+                    self.volume_data[:, :, :, index].transpose(2, 1, 0), axis=0),
+                    axis=1)
         elif axis == 'y':
             # XZ 切面: (3, H, index, D) -> (H, D, 3)
             return self.volume_data[:, :, index, :].transpose(2, 1, 0)
