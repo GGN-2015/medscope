@@ -355,9 +355,9 @@ class VolumeSliceViewer:
         
         self.volume_data = volume
         _, h, w, d = volume.shape
-        self.current_x =   (h // 2)
-        self.current_y = - (w // 2)
-        self.current_z =   (d // 2)
+        self.current_x = (h // 2)
+        self.current_y = (w // 2)
+        self.current_z = (d // 2)
         self.update_all_slices()
     
     def set_slice_positions(self, x: Optional[float] = None, y: Optional[float] = None, z: Optional[float] = None) -> None:
@@ -368,9 +368,9 @@ class VolumeSliceViewer:
         if x is not None:
             self.current_x = max(0.0, min(x, h - 1))
         if y is not None:
-            self.current_y = max(0.0 , min(- y + 0.5 * w, w - 1.0))
+            self.current_y = max(0.0, min(y, w - 1))
         if z is not None:
-            self.current_z = max(0.0, min(- z + 0.75 * d, d - 1))
+            self.current_z = max(0.0, min(z, d - 1))
     
         self.update_all_slices()
 
@@ -394,18 +394,15 @@ class VolumeSliceViewer:
 
         if axis == 'z':
             # XY 切面: (3, H, W, index) -> (H, W, 3)
-            return np.flip(
-                np.flip(
-                    self.volume_data[:, :, :, index].transpose(2, 1, 0), axis=0),
-                    axis=1)
+            return self.volume_data[:, :, :, index]
+        
         elif axis == 'y':
             # XZ 切面: (3, H, index, D) -> (H, D, 3)
-            return self.volume_data[:, :, index, :].transpose(2, 1, 0)
+            return self.volume_data[:, :, index, :]
+        
         else:  # axis == 'x'
             # YZ 切面: (3, index, W, D) -> (W, D, 3)
-            return np.flip(
-                np.flip(self.volume_data[:, index, :, :].transpose(1, 2, 0), axis=0),
-                axis=1)
+            return self.volume_data[:, index, :, :]
 
     def _interpolate_slice(self, axis: str, position: float) -> np.ndarray:
         """
@@ -465,9 +462,11 @@ class VolumeSliceViewer:
         if axis == 'z':
             interpolated = self._interpolate_slice('z', self.current_z)
             self.image_widgets[0].update_slice(interpolated)
+
         elif axis == 'y':
             interpolated = self._interpolate_slice('y', self.current_y)
             self.image_widgets[1].update_slice(interpolated)
+
         elif axis == 'x':
             interpolated = self._interpolate_slice('x', self.current_x)
             self.image_widgets[2].update_slice(interpolated)
@@ -539,7 +538,7 @@ class MedScopeWindow(QMainWindow):
     
     def _create_default_volume(self) -> None:
         """生成默认 RGB 3D 测试数据 (3, 64, 64, 64)"""
-        rgb_volume = np.zeros((3, 64, 64, 64), dtype=np.uint8)
+        rgb_volume = np.zeros((3, 1, 1, 1), dtype=np.uint8)
         rgb_volume[0] = 128  # R通道
         rgb_volume[1] = 128  # G通道
         rgb_volume[2] = 128  # B通道
