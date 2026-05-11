@@ -189,8 +189,8 @@ class VTKWidget(QFrame):
         self.model_manager: VTKModelManager = VTKModelManager(self.renderer)
         self.set_camera_default()
         
-        render_window.Render()
         self.vtk_widget.Initialize()
+        render_window.Render()
         
         layout = QVBoxLayout(self)
         layout.setContentsMargins(0, 0, 0, 0)
@@ -362,7 +362,7 @@ class VolumeSliceViewer:
     
     def set_slice_positions(self, x: Optional[float] = None, y: Optional[float] = None, z: Optional[float] = None) -> None:
         if self.volume_data is None:
-            return
+            raise RuntimeError("volume_data has not been selected")
         
         _, h, w, d = self.volume_data.shape
         if x is not None:
@@ -394,15 +394,15 @@ class VolumeSliceViewer:
 
         if axis == 'z':
             # XY 切面: (3, H, W, index) -> (H, W, 3)
-            return self.volume_data[:, :, :, index]
+            return self.volume_data[:, :, :, index].transpose(1, 2, 0)
         
         elif axis == 'y':
             # XZ 切面: (3, H, index, D) -> (H, D, 3)
-            return self.volume_data[:, :, index, :]
+            return self.volume_data[:, :, index, :].transpose(1, 2, 0)
         
         else:  # axis == 'x'
             # YZ 切面: (3, index, W, D) -> (W, D, 3)
-            return self.volume_data[:, index, :, :]
+            return self.volume_data[:, index, :, :].transpose(1, 2, 0)
 
     def _interpolate_slice(self, axis: str, position: float) -> np.ndarray:
         """

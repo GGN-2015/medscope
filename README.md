@@ -56,7 +56,7 @@ window = MedScopeWindow()
 # Add a 3D model
 window.add_model_from_file(
     "bone_model",
-    "BONE-1.new.stl",
+    "BONE-1.real.stl",
     (1.0, 1.0, 1.0))  # white, random if not given
 
 # Set the pose of camera
@@ -87,7 +87,7 @@ def move_model():
     global lp
     import random
     x = random.random() * 256
-    y = random.random() * 256 - 256
+    y = random.random() * 256
     z = random.random() * 256
     window.set_slice_positions(x, y, z)
     window.set_model_pose(
