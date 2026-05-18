@@ -1,13 +1,13 @@
 [project]
 name = "medscope"
-version = "0.1.19"
+version = "0.1.20"
 description = "Medical Intraoperative Real-time Visualization System."
 authors = [
     {name = "GGN_2015",email = "neko@jlulug.org"}
 ]
 license = {text = "MIT"}
 readme = "README.md"
-requires-python = ">=3.10,<3.13"
+requires-python = ">=3.10,<3.14"
 dependencies = [
     "numpy",
     "pyqt5",

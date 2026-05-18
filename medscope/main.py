@@ -280,12 +280,16 @@ class VTKWidget(QFrame):
 class ImageDisplayWidget(QFrame):
     """RGB 彩色图像显示控件，适配 3 通道切片"""
     
-    def __init__(self, parent: Optional[QWidget] = None):
+    def __init__(self, coord_mode:str, parent: Optional[QWidget] = None):
         super().__init__(parent)
         self.setFrameStyle(QFrame.Box)
         self.setStyleSheet("background-color: black;")
         self.image_data: Optional[np.ndarray] = None
         self.setMinimumSize(100, 100)
+
+        self.coord_mode = coord_mode
+        if self.coord_mode not in ["xy", "yz", "xz"]:
+            raise ValueError("ImageDisplayWidget: coord_mode should be xy, yz or xz")
         
     def update_slice(self, slice_rgb: np.ndarray) -> None:
         """
@@ -323,13 +327,17 @@ class ImageDisplayWidget(QFrame):
 class VolumeSliceViewer:
     """适配 4D RGB 3D 图像 (3, N, M, L) 的切片管理器"""
     
-    def __init__(self, image_widgets: List[ImageDisplayWidget]):
+    def __init__(self, image_widgets: List[ImageDisplayWidget], use_crosshair:bool):
         self.volume_data: Optional[np.ndarray] = None  # shape=(3, N, M, L), uint8
         self.image_widgets = image_widgets
         
         self.current_x: float = 0
         self.current_y: float = 0
         self.current_z: float = 0
+
+        # 准星颜色
+        self.crosshair_color = (255, 0, 0)
+        self.use_crosshair = use_crosshair
         
     def set_volume(self, volume: np.ndarray) -> None:
         """
@@ -404,7 +412,24 @@ class VolumeSliceViewer:
             # YZ 切面: (3, index, W, D) -> (W, D, 3)
             return self.volume_data[:, index, :, :].transpose(1, 2, 0)
 
-    def _interpolate_slice(self, axis: str, position: float) -> np.ndarray:
+    def _paint_line(self, np3d:np.ndarray, color3d:tuple[int, int, int], axis_cnt:int, val:int) -> np.ndarray:
+        np3d = np3d.copy()
+        if axis_cnt not in [0, 1]:
+            raise ValueError("axis_cnt should be 0 or 1.")
+        # 线不在图内
+        if not (0 <= val < np3d.shape[axis_cnt]):
+            return np3d
+        
+        if axis_cnt == 0:
+            for i in range(3):
+                np3d[val, :, i] = color3d[i]
+        else:
+            for i in range(3):
+                np3d[:, val, i] = color3d[i]
+        return np3d
+
+
+    def _interpolate_slice(self, axis: str, position: float, pos3d: list[float]) -> np.ndarray:
         """
         对指定轴向上的切片进行插值
         
@@ -437,38 +462,54 @@ class VolumeSliceViewer:
         interpolated = (1 - frac) * slice_low + frac * slice_high
         
         # 确保数据类型为 uint8
-        return interpolated.astype(np.uint8)
+        interpolated = interpolated.astype(np.uint8)
+
+        # 获取另外两个维度的值
+        if self.use_crosshair:
+            name_list = ['x', 'y', 'z']
+            cnt = 0
+            for i in range(3):
+                if name_list[i] != axis:
+                    interpolated = self._paint_line(interpolated, self.crosshair_color, cnt, round(pos3d[i]))
+                    cnt += 1
+        return interpolated
 
     def update_all_slices(self) -> None:
         if self.volume_data is None:
             return
+
+        # 目前坐标
+        pos3d = [self.current_x, self.current_y, self.current_z]
         
         # XY 切面 (固定Z)
-        xy = self._interpolate_slice('z', self.current_z)
+        xy = self._interpolate_slice('z', self.current_z, pos3d)
         self.image_widgets[0].update_slice(xy)
         
         # XZ 切面 (固定Y)
-        xz = self._interpolate_slice('y', self.current_y)
+        xz = self._interpolate_slice('y', self.current_y, pos3d)
         self.image_widgets[1].update_slice(xz)
         
         # YZ 切面 (固定X)
-        yz = self._interpolate_slice('x', self.current_x)
+        yz = self._interpolate_slice('x', self.current_x, pos3d)
         self.image_widgets[2].update_slice(yz)
     
     def _update_slice(self, axis: str) -> None:
         if self.volume_data is None:
             return
         
+        # 目前坐标
+        pos3d = [self.current_x, self.current_y, self.current_z]
+
         if axis == 'z':
-            interpolated = self._interpolate_slice('z', self.current_z)
+            interpolated = self._interpolate_slice('z', self.current_z, pos3d)
             self.image_widgets[0].update_slice(interpolated)
 
         elif axis == 'y':
-            interpolated = self._interpolate_slice('y', self.current_y)
+            interpolated = self._interpolate_slice('y', self.current_y, pos3d)
             self.image_widgets[1].update_slice(interpolated)
 
         elif axis == 'x':
-            interpolated = self._interpolate_slice('x', self.current_x)
+            interpolated = self._interpolate_slice('x', self.current_x, pos3d)
             self.image_widgets[2].update_slice(interpolated)
     
     def get_current_positions(self) -> Tuple[float, float, float]:
@@ -480,7 +521,7 @@ class MedScopeWindow(QMainWindow):
             self.window_title = new_title
             self.setWindowTitle(self.window_title)
 
-    def __init__(self):
+    def __init__(self, use_crosshair:bool=True):
         super().__init__()
 
         self.window_title = "MedScope"
@@ -507,13 +548,13 @@ class MedScopeWindow(QMainWindow):
         self.vtk_widget: VTKWidget = VTKWidget()
         left_column.addWidget(self.vtk_widget)
         
-        self.image_widget_xy: ImageDisplayWidget = ImageDisplayWidget()
+        self.image_widget_xy: ImageDisplayWidget = ImageDisplayWidget("xy")
         left_column.addWidget(self.image_widget_xy)
         
-        self.image_widget_xz: ImageDisplayWidget = ImageDisplayWidget()
+        self.image_widget_xz: ImageDisplayWidget = ImageDisplayWidget("xz")
         right_column.addWidget(self.image_widget_xz)
         
-        self.image_widget_yz: ImageDisplayWidget = ImageDisplayWidget()
+        self.image_widget_yz: ImageDisplayWidget = ImageDisplayWidget("yz")
         right_column.addWidget(self.image_widget_yz)
         
         left_column.setStretch(0, 1)
@@ -529,7 +570,7 @@ class MedScopeWindow(QMainWindow):
             self.image_widget_xy,
             self.image_widget_xz,
             self.image_widget_yz
-        ])
+        ], use_crosshair)
         
         self.timer_pool: Dict[str, QTimer] = dict()
         self.set_mouse_interaction(False)

@@ -6,7 +6,7 @@ Medical Intraoperative Real-time Visualization System.
 > [!TIP]
 > For another demo, see https://github.com/GGN-2015/medscope_demo_project
 
-![](/img/demo.gif)
+![](https://github.com/GGN-2015/medscope/blob/main/img/demo.gif?raw=true)
 
 ## Installation
 
@@ -70,37 +70,31 @@ window.set_camera_pose(
 # Volume data should be given in 3D np.ndarray 
 #   and dtype should be np.uint8
 #   RGB channel image 3 * N * M * L
-window.set_volume(np.random.randint(0, 255, (3, 256, 256, 256)).astype(np.uint8))
+# window.set_volume(np.random.randint(0, 255, (3, 256, 256, 256)).astype(np.uint8))
 
 # use N * M * L to achieve grey image
-# window.set_volume(np.random.randint(0, 255, (256, 256, 256)).astype(np.uint8))
+window.set_volume(np.random.randint(0, 255, (256, 256, 256)).astype(np.uint8))
 
-# calculate fps every 3.0s
+# calculate every 1.0s
 import time
 lp = time.time()
-pp = 3.0
-fc = 0
+pp = 1.0
 
 # Create a callback function to move your model
 def move_model():
-    global fc
-    global lp
     import random
-    x = random.random() * 256
-    y = random.random() * 256
-    z = random.random() * 256
-    window.set_slice_positions(x, y, z)
-    window.set_model_pose(
-        "bone_model",
-        (x - 128, y - 128, z - 128),
-        random_rotation_matrix()
-    )
-    fc += 1
+    global lp
     if time.time() - lp >= pp:
-        print(f"fps: {fc / (time.time() - lp)}")
         lp = time.time()
-        fc = 0
-
+        x = random.random() * 256
+        y = random.random() * 256
+        z = random.random() * 256
+        window.set_slice_positions(x, y, z)
+        window.set_model_pose(
+            "bone_model",
+            (x  - 128, y - 128, z - 128),
+            random_rotation_matrix()
+        )
 
 # Call move_model every 1ms (as quickly as the processor can)
 window.add_timer("move_model", 1, move_model)
