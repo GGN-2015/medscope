@@ -450,6 +450,8 @@ class VolumeSliceViewer:
         Returns:
             插值后的 RGB 图像，shape=(H, W, 3) 或对应维度
         """
+        print("_interpolate_slice")
+
         if self.volume_data is None:
             return np.array([])
         
@@ -462,15 +464,14 @@ class VolumeSliceViewer:
         
         # 如果位置正好是整数或者小数部分为0，直接返回对应切片
         if frac == 0 or idx_low == idx_high:
-            return self._get_slice_array(axis, idx_low)
-        
-        # 获取两个相邻切片
-        slice_low = self._get_slice_array(axis, idx_low)
-        slice_high = self._get_slice_array(axis, idx_high)
-        
-        # 线性插值
-        interpolated = (1 - frac) * slice_low + frac * slice_high
-        
+            interpolated = self._get_slice_array(axis, idx_low)
+
+        else:
+            # 获取两个相邻切片
+            slice_low = self._get_slice_array(axis, idx_low)
+            slice_high = self._get_slice_array(axis, idx_high)
+            interpolated = (1 - frac) * slice_low + frac * slice_high # 线性插值
+            
         # 确保数据类型为 uint8
         interpolated = interpolated.astype(np.uint8)
 
