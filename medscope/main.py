@@ -9,6 +9,10 @@ import os
 import vtk
 from vtkmodules.qt.QVTKRenderWindowInteractor import QVTKRenderWindowInteractor
 
+try:
+    from .ImageWrap import ImageWrap
+except:
+    from ImageWrap import ImageWrap
 
 class VTKModelManager:
     """Manages 3D models in VTK scene."""
@@ -327,7 +331,7 @@ class ImageDisplayWidget(QFrame):
 class VolumeSliceViewer:
     """适配 4D RGB 3D 图像 (3, N, M, L) 的切片管理器"""
     
-    def __init__(self, image_widgets: List[ImageDisplayWidget], use_crosshair:bool):
+    def __init__(self, image_widgets: List[ImageDisplayWidget], use_crosshair:bool, im_wrap_xy:ImageWrap, im_wrap_xz:ImageWrap, im_wrap_yz:ImageWrap):
         self.volume_data: Optional[np.ndarray] = None  # shape=(3, N, M, L), uint8
         self.image_widgets = image_widgets
         
@@ -338,6 +342,12 @@ class VolumeSliceViewer:
         # 准星颜色
         self.crosshair_color = (255, 0, 0)
         self.use_crosshair = use_crosshair
+
+        self.im_wrap = {
+            "xy": im_wrap_xy,
+            "xz": im_wrap_xz,
+            "yz": im_wrap_yz
+        }
         
     def set_volume(self, volume: np.ndarray) -> None:
         """
@@ -429,7 +439,7 @@ class VolumeSliceViewer:
         return np3d
 
 
-    def _interpolate_slice(self, axis: str, position: float, pos3d: list[float]) -> np.ndarray:
+    def _interpolate_slice(self, axis: str, position: float, pos3d: list[float], im_w: ImageWrap) -> np.ndarray:
         """
         对指定轴向上的切片进行插值
         
@@ -472,7 +482,9 @@ class VolumeSliceViewer:
                 if name_list[i] != axis:
                     interpolated = self._paint_line(interpolated, self.crosshair_color, cnt, round(pos3d[i]))
                     cnt += 1
-        return interpolated
+        
+        # 对图片的坐标系进行映射
+        return im_w.deliver(interpolated)
 
     def update_all_slices(self) -> None:
         if self.volume_data is None:
@@ -482,15 +494,15 @@ class VolumeSliceViewer:
         pos3d = [self.current_x, self.current_y, self.current_z]
         
         # XY 切面 (固定Z)
-        xy = self._interpolate_slice('z', self.current_z, pos3d)
+        xy = self._interpolate_slice('z', self.current_z, pos3d, self.im_wrap["xy"])
         self.image_widgets[0].update_slice(xy)
         
         # XZ 切面 (固定Y)
-        xz = self._interpolate_slice('y', self.current_y, pos3d)
+        xz = self._interpolate_slice('y', self.current_y, pos3d, self.im_wrap["xz"])
         self.image_widgets[1].update_slice(xz)
         
         # YZ 切面 (固定X)
-        yz = self._interpolate_slice('x', self.current_x, pos3d)
+        yz = self._interpolate_slice('x', self.current_x, pos3d, self.im_wrap["yz"])
         self.image_widgets[2].update_slice(yz)
     
     def _update_slice(self, axis: str) -> None:
@@ -501,15 +513,15 @@ class VolumeSliceViewer:
         pos3d = [self.current_x, self.current_y, self.current_z]
 
         if axis == 'z':
-            interpolated = self._interpolate_slice('z', self.current_z, pos3d)
+            interpolated = self._interpolate_slice('z', self.current_z, pos3d, self.im_wrap["xy"])
             self.image_widgets[0].update_slice(interpolated)
 
         elif axis == 'y':
-            interpolated = self._interpolate_slice('y', self.current_y, pos3d)
+            interpolated = self._interpolate_slice('y', self.current_y, pos3d, self.im_wrap["xz"])
             self.image_widgets[1].update_slice(interpolated)
 
         elif axis == 'x':
-            interpolated = self._interpolate_slice('x', self.current_x, pos3d)
+            interpolated = self._interpolate_slice('x', self.current_x, pos3d, self.im_wrap["yz"])
             self.image_widgets[2].update_slice(interpolated)
     
     def get_current_positions(self) -> Tuple[float, float, float]:
@@ -521,7 +533,7 @@ class MedScopeWindow(QMainWindow):
             self.window_title = new_title
             self.setWindowTitle(self.window_title)
 
-    def __init__(self, use_crosshair:bool=True):
+    def __init__(self, use_crosshair:bool=True, im_wrap_xy:ImageWrap=ImageWrap(), im_wrap_xz:ImageWrap=ImageWrap(), im_wrap_yz:ImageWrap=ImageWrap()):
         super().__init__()
 
         self.window_title = "MedScope"
@@ -570,7 +582,7 @@ class MedScopeWindow(QMainWindow):
             self.image_widget_xy,
             self.image_widget_xz,
             self.image_widget_yz
-        ], use_crosshair)
+        ], use_crosshair, im_wrap_xy, im_wrap_xz, im_wrap_yz)
         
         self.timer_pool: Dict[str, QTimer] = dict()
         self.set_mouse_interaction(False)
