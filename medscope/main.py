@@ -450,7 +450,6 @@ class VolumeSliceViewer:
         Returns:
             插值后的 RGB 图像，shape=(H, W, 3) 或对应维度
         """
-        print("_interpolate_slice")
 
         if self.volume_data is None:
             return np.array([])
