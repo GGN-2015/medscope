@@ -59,6 +59,9 @@ window.add_model_from_file(
     "BONE-1.real.stl",
     (1.0, 1.0, 1.0))  # white, random if not given
 
+# Set model color
+window.set_model_color("bone_model", (1.0, 0.0, 0.0))
+
 # Check intersection (True)
 print(window.check_model_intersect("bone_model", "bone_model"))
 

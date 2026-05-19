@@ -40,11 +40,25 @@ class VTKModelManager:
     
     def check_model_intersect(self, model_name_1:str, model_name_2:str) -> bool:
         if model_name_1 not in self.models:
-            print(f"Model '{model_name_1}' not exists.")
+            raise ValueError(f"Model '{model_name_1}' not exists.")
         if model_name_2 not in self.models:
-            print(f"Model '{model_name_2}' not exists.")
+            raise ValueError(f"Model '{model_name_2}' not exists.")
         return self.is_actors_intersect(
             self.models[model_name_1], self.models[model_name_2])
+    
+    def set_model_color(self, model_name:str, color:tuple[float, ...]):
+        if model_name not in self.models:
+            raise ValueError(f"Model '{model_name}' not exists.")
+        if len(color) not in [3, 4]:
+            raise ValueError("color should be of length 3 or 4.")
+        
+        if max(color) > 1:
+            color = tuple([x / 255.0 for x in color])
+        
+        self.models[model_name].GetProperty().SetColor(color[0], color[1], color[2])
+
+        if len(color) >= 4:
+            self.models[model_name].GetProperty().SetOpacity(color[3])
         
     def add_model_from_file(self, name: str, file_path: str, 
                            color: Optional[Tuple[float, float, float]] = None, 
@@ -228,7 +242,10 @@ class VTKWidget(QFrame):
 
     def check_model_intersect(self, model_name_1:str, model_name_2:str) -> bool:
         return self.model_manager.check_model_intersect(model_name_1, model_name_2)
-        
+    
+    def set_model_color(self, model_name:str, color:tuple[float, ...]):
+        return self.model_manager.set_model_color(model_name, color)
+
     def resizeEvent(self, a0):
         super().resizeEvent(a0)
         if hasattr(self, 'vtk_widget'):
@@ -643,6 +660,9 @@ class MedScopeWindow(QMainWindow):
     # 对外接口：输入 4D RGB 数组 (3, N, M, L)
     def set_volume(self, volume: np.ndarray) -> None:
         self.slice_viewer.set_volume(volume)
+
+    def set_model_color(self, model_name:str, color:tuple[float, ...]):
+        return self.vtk_widget.set_model_color(model_name, color)
     
     def set_slice_positions(self, x: Optional[int] = None, y: Optional[int] = None, z: Optional[int] = None) -> None:
         self.slice_viewer.set_slice_positions(x, y, z)
