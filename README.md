@@ -59,6 +59,9 @@ window.add_model_from_file(
     "BONE-1.real.stl",
     (1.0, 1.0, 1.0))  # white, random if not given
 
+# Check intersection (True)
+print(window.check_model_intersect("bone_model", "bone_model"))
+
 # Set the pose of camera
 #   you can change camera pos in callback function with add_timer
 window.set_camera_pose(

@@ -21,6 +21,30 @@ class VTKModelManager:
         self.renderer: vtk.vtkRenderer = renderer
         self.models: Dict[str, vtk.vtkActor] = {}
         self.model_sources: Dict[str, Any] = {}
+
+    def is_actors_intersect(self, actor1: vtk.vtkActor, actor2: vtk.vtkActor) -> bool:
+        pd1 = actor1.GetMapper().GetInput()
+        pd2 = actor2.GetMapper().GetInput()
+
+        collide = vtk.vtkCollisionDetectionFilter()
+        collide.SetInputData(0, pd1)
+        collide.SetInputData(1, pd2)
+
+        collide.SetMatrix(0, actor1.GetMatrix())
+        collide.SetMatrix(1, actor2.GetMatrix())
+
+        collide.SetCollisionModeToFirstContact()
+        collide.Update()
+
+        return collide.GetNumberOfContacts() > 0
+    
+    def check_model_intersect(self, model_name_1:str, model_name_2:str) -> bool:
+        if model_name_1 not in self.models:
+            print(f"Model '{model_name_1}' not exists.")
+        if model_name_2 not in self.models:
+            print(f"Model '{model_name_2}' not exists.")
+        return self.is_actors_intersect(
+            self.models[model_name_1], self.models[model_name_2])
         
     def add_model_from_file(self, name: str, file_path: str, 
                            color: Optional[Tuple[float, float, float]] = None, 
@@ -201,6 +225,9 @@ class VTKWidget(QFrame):
         layout.addWidget(self.vtk_widget)
         
         self.mouse_interaction_enabled: bool = True
+
+    def check_model_intersect(self, model_name_1:str, model_name_2:str) -> bool:
+        return self.model_manager.check_model_intersect(model_name_1, model_name_2)
         
     def resizeEvent(self, a0):
         super().resizeEvent(a0)
@@ -640,7 +667,10 @@ class MedScopeWindow(QMainWindow):
         
     def set_mouse_interaction(self, enabled: bool) -> None:
         self.vtk_widget.set_mouse_interaction(enabled)
-        
+    
+    def check_model_intersect(self, model_name_1:str, model_name_2:str) -> bool:
+        return self.vtk_widget.check_model_intersect(model_name_1, model_name_2)
+
     def add_model_from_file(self, name: str, file_path: str,
                            color: Optional[Tuple[float, float, float]] = None,
                            scale: float = 1.0,
